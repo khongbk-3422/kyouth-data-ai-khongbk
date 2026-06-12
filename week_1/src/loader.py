@@ -45,14 +45,11 @@ def load_all_jsons(input_dir: str, output_dir: str):
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 
-            # Using INSERT OR IGNORE enforces warehouse idempotency. 
-            # If source_id already exists, SQLite safely skips it without raising an error.
             cursor.execute("""
                 INSERT OR IGNORE INTO jobs (source_id, job_title, company, description)
                 VALUES (?, ?, ?, ?)
             """, (data["source_id"], data["job_title"], data["company"], data["description"]))
             
-            # Check rowcount to determine if database changed or ignored the record
             if cursor.rowcount > 0:
                 print(f"✅ Inserted: {filename}")
                 inserted_count += 1
