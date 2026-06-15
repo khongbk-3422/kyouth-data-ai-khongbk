@@ -2,6 +2,8 @@ import json
 import sqlite3
 from pathlib import Path
 
+from src.sql import load_sql
+
 def load_all_jsons(input_dir: str, output_dir: str):
     print("🥇 Gold: Starting database loading...")
     
@@ -11,15 +13,7 @@ def load_all_jsons(input_dir: str, output_dir: str):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS jobs (
-            source_id TEXT PRIMARY KEY,
-            job_title TEXT NOT NULL,
-            company TEXT NOT NULL,
-            description TEXT NOT NULL,
-            tech_stack TEXT
-        )
-    """)
+    cursor.execute(load_sql("queries/create_jobs_table.sql"))
     conn.commit()
 
     input_path = Path(input_dir)
@@ -45,10 +39,10 @@ def load_all_jsons(input_dir: str, output_dir: str):
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 
-            cursor.execute("""
-                INSERT OR IGNORE INTO jobs (source_id, job_title, company, description)
-                VALUES (?, ?, ?, ?)
-            """, (data["source_id"], data["job_title"], data["company"], data["description"]))
+            cursor.execute(
+                load_sql("queries/insert_job.sql"),
+                (data["source_id"], data["job_title"], data["company"], data["description"]),
+            )
             
             if cursor.rowcount > 0:
                 print(f"✅ Inserted: {filename}")
