@@ -157,6 +157,8 @@ def process_all_html(input_dir: str, output_dir: str):
             cleaned_title = clean_string(raw_title)
             cleaned_company = clean_string(raw_company)
             cleaned_description = clean_string(raw_description)
+            if cleaned_description == "-":
+                cleaned_description = ""
 
             data_payload = {
                 "source_id": source_id,
