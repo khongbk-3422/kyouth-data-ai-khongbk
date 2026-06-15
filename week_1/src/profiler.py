@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 
+from src.sql import load_sql
+
 def run_data_profile(db_path: str):
     """
     Connects to the database and generates data metrics to audit data quality.
@@ -17,7 +19,7 @@ def run_data_profile(db_path: str):
 
     try:
         # 1. Total records count
-        cursor.execute("SELECT COUNT(*) FROM jobs")
+        cursor.execute(load_sql("queries/count_jobs.sql"))
         total_records = cursor.fetchone()[0]
 
         if total_records == 0:
@@ -31,13 +33,7 @@ def run_data_profile(db_path: str):
             return
 
         # 2. Count missing or NULL entries across core dimensions
-        cursor.execute("""
-            SELECT 
-                SUM(CASE WHEN job_title IS NULL OR job_title = '' THEN 1 ELSE 0 END),
-                SUM(CASE WHEN company IS NULL OR company = '' THEN 1 ELSE 0 END),
-                SUM(CASE WHEN description IS NULL OR description = '' THEN 1 ELSE 0 END)
-            FROM jobs
-        """)
+        cursor.execute(load_sql("queries/count_missing_values.sql"))
         missing_title, missing_company, missing_desc = cursor.fetchone()
         
         # Guard against None responses from an empty table aggregate evaluation
@@ -46,25 +42,15 @@ def run_data_profile(db_path: str):
         missing_desc = missing_desc or 0
 
         # 3. Calculate average length of job description string fields
-        cursor.execute("SELECT AVG(LENGTH(description)) FROM jobs")
+        cursor.execute(load_sql("queries/avg_description_length.sql"))
         avg_desc_len = int(round(cursor.fetchone()[0] or 0))
 
         # 4. Extract shortest description with its contextual identification metrics
-        cursor.execute("""
-            SELECT source_id, job_title, LENGTH(description) 
-            FROM jobs 
-            ORDER BY LENGTH(description) ASC 
-            LIMIT 1
-        """)
+        cursor.execute(load_sql("queries/shortest_description.sql"))
         short_id, short_title, short_len = cursor.fetchone()
 
         # 5. Extract longest description with its contextual identification metrics
-        cursor.execute("""
-            SELECT source_id, job_title, LENGTH(description) 
-            FROM jobs 
-            ORDER BY LENGTH(description) DESC 
-            LIMIT 1
-        """)
+        cursor.execute(load_sql("queries/longest_description.sql"))
         long_id, long_title, long_len = cursor.fetchone()
 
         # Print metrics report exactly matching the requested format specifications
