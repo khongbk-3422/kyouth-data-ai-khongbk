@@ -1,6 +1,17 @@
+import hashlib
 import json
+import logging
 import sqlite3
 from pathlib import Path
+
+from src.utils import load_sql
+
+logger = logging.getLogger(__name__)
+
+
+def _calculate_content_hash(job_title: str, company: str, description: str) -> str:
+    hash_input = f"{job_title}|{company}|{description}"
+    return hashlib.sha256(hash_input.encode()).hexdigest()
 
 def load_all_jsons(input_dir: str, output_dir: str):
     print("🥇 Gold: Starting database loading...")
@@ -11,15 +22,8 @@ def load_all_jsons(input_dir: str, output_dir: str):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS jobs (
-            source_id TEXT PRIMARY KEY,
-            job_title TEXT NOT NULL,
-            company TEXT NOT NULL,
-            description TEXT NOT NULL,
-            tech_stack TEXT
-        )
-    """)
+    query = load_sql("create_jobs_table")
+    cursor.execute(query)
     conn.commit()
 
     input_path = Path(input_dir)
@@ -44,21 +48,25 @@ def load_all_jsons(input_dir: str, output_dir: str):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+            
+            content_hash = _calculate_content_hash(
+                data["job_title"],
+                data["company"],
+                data["description"]
+            )
                 
-            cursor.execute("""
-                INSERT OR IGNORE INTO jobs (source_id, job_title, company, description)
-                VALUES (?, ?, ?, ?)
-            """, (data["source_id"], data["job_title"], data["company"], data["description"]))
+            query = load_sql("insert_job_record")
+            cursor.execute(query, (data["source_id"], data["job_title"], data["company"], data["description"], content_hash))
             
             if cursor.rowcount > 0:
-                print(f"✅ Inserted: {filename}")
+                logger.info(f"Inserted: {filename}")
                 inserted_count += 1
             else:
-                print(f"⏭️ Skipped (duplicate): {filename}")
+                logger.warning(f"Skipped (duplicate): {filename}")
                 skipped_count += 1
                 
-        except Exception:
-            print(f"⚠️ Failed to load: {filename}")
+        except Exception as e:
+            logger.error(f"Failed to load: {filename} | Reason: {e}")
             skipped_count += 1
 
     conn.commit()

@@ -1,7 +1,13 @@
 import sys
+import logging
 
 from pathlib import Path # Figure out why use Path?
 from src.ingestor import ingest_all_mhtml
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s |%(levelname)s |%(message)s"
+)
 from src.processor import process_all_html
 from src.loader import load_all_jsons
 from src.profiler import run_data_profile
@@ -41,6 +47,7 @@ def prompt_for_command():
     print("  process       Cleans and structures HTML data into validated JSON profiles.")
     print("  load          Loads JSON profiles into a SQLite database with idempotency.")
     print("  profile       Generates a data quality report for the SQLite database.")
+    print("  all          Runs the entire pipeline: ingest → process → load → profile")
     choice = input("Select a command : ").strip().lower()
     return choice
 
@@ -61,6 +68,12 @@ def main():
             run_gold()
 
         case "profile":
+            run_profiler()
+
+        case "all":
+            run_bronze()
+            run_silver()
+            run_gold()
             run_profiler()
             
         case _:
