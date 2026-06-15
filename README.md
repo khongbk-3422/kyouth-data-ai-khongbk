@@ -75,6 +75,14 @@ uv run python main.py profile
 
 This runs the data profiler against the Gold database.
 
+### Run All Steps
+
+```bash
+uv run python main.py all
+```
+
+This runs the complete pipeline: ingest → process → load → profile.
+
 ### Expected Outputs
 
 - Bronze: raw `.html` files in `week_1/data/1_bronze/`
@@ -109,6 +117,6 @@ What happens if `processor.py` crashes halfway? How are automated orchestration 
 
 ## Notes
 
-- The CLI currently supports `ingest`, `process`, `load`, and `profile`.
+- The CLI currently supports `ingest`, `process`, `load`, `profile`, and `all`.
 - The Gold layer uses SQLite with `source_id` as the primary key.
 - The Silver layer is designed to be idempotent by skipping existing output files.
