@@ -1,12 +1,12 @@
 [project]
-name = "kyouth-data-ai-khongbk"
+name = "week-2"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "beautifulsoup4>=4.15.0",
-    "bs4>=0.0.2",
-    "pydantic>=2.13.4",
-    "ruff>=0.15.16",
+    "google-genai>=2.8.0",
+    "ollama>=0.6.2",
+    "python-dotenv>=1.2.2",
+    "ruff>=0.15.17",
 ]
