@@ -1,122 +1,134 @@
-# K-Youth Data AI Pipeline
+# AI Job Matching & Skill Gap Analyzer (Week 2)
 
-## Project Description
+## Project Overview
+This project is an AI-powered data processing pipeline designed to bridge the gap between job market demands and applicant skills. It leverages both local Large Language Models (Ollama) and cloud-based models (Google Gemini) to intelligently parse job descriptions, extract core technical stacks, and deterministically calculate the specific skill gaps of a candidate based on their resume. 
 
-This project is a small end-to-end data pipeline for job listings built around the Medallion Architecture. It ingests raw JobStreet `.mhtml` files into a Bronze layer of HTML files, transforms them into cleaned Silver JSON records, loads those records into a SQLite Gold layer, and provides a simple profiler command for database inspection.
+---
 
-The goal is to practice the same core ideas used in real data platforms: keeping raw source data, cleaning and validating records before load, enforcing a basic schema, and making the pipeline safe to rerun without creating duplicates.
+## 🛠️ Setup Instructions
 
-## Setup Instructions
+**Prerequisites:** Ensure you have the following installed on your local machine:
+* **Python 3.10+**
+* **`uv`** (Python package manager)
+* **Ollama** (Desktop application running in the background)
 
-### Prerequisites
+**1. Sync the Python Environment:**
+This project uses `uv` for lightning-fast dependency management. Inside the `week_2` directory, run this command to automatically create the virtual environment and install all required packages (`google-genai`, `ollama`, `pydantic`, `python-dotenv`):
 
-- Python `3.14` or newer
-- `uv` recommended for dependency management and running commands
-- A terminal in the repository root
+    uv sync
 
-### Install Dependencies
+**2. Configure Environment Variables:**
+Create a `.env` file in the root of the `week_2` directory and add your Google AI Studio API key. *(Note: Do not commit this file to Git. Ensure it is in your `.gitignore`)*.
 
-From the repository root, run:
+    GOOGLE_API_KEY="your_actual_api_key_here"
 
-```bash
-uv sync
-```
+**3. Prepare Data Files:**
+Ensure `jobs_d1.db` (the SQLite database) and `resume.txt` (the candidate's resume) are present in the `week_2` directory.
 
-If you prefer `pip`, install the project dependencies from `pyproject.toml` instead.
+---
 
-### Environment Setup
+## 🚀 Execution Guide (Step-by-Step Usage)
 
-This project does not require API keys or other environment variables.
+All Python scripts must be executed using `uv run` to ensure they use the correct virtual environment.
 
-### Project Layout
+### Phase 1: Verify Local Models (Part 1)
+First, download the required local models into Ollama. Run these commands one by one:
 
-- `week_1/data/0_source/` contains the raw `.mhtml` input files
-- `week_1/data/1_bronze/` stores extracted HTML files
-- `week_1/data/2_silver/` stores cleaned JSON files
-- `week_1/data/3_gold/` stores the SQLite database `jobs.db`
+    ollama pull llama3.1
+    ollama pull phi3
+    ollama pull deepseek-r1:1.5b
 
-## Usage
+Verify they are correctly installed:
 
-Run the pipeline from the `week_1` folder because the CLI uses local relative imports:
+    ollama ls
 
-```bash
-cd week_1
-```
+### Phase 2: Test Model Routing (Part 3)
+Test the `prompt_model.py` script to ensure it correctly routes prompts to both your local machine and the cloud.
 
-### Ingest Bronze Data
+**Test Local Model (Ollama):**
 
-```bash
-uv run python main.py ingest
-```
+    uv run prompt_model.py llama3.1 "Tell me a short coding joke."
 
-This reads `data/0_source/*.mhtml` and writes raw HTML files into `data/1_bronze/`.
+**Test Cloud Model (Gemini):**
 
-### Process Silver Data
+    uv run prompt_model.py gemini-3.5-flash "What is the capital of Malaysia?"
 
-```bash
-uv run python main.py process
-```
+*Expected Output:* The terminal will print `--- RESPONSE ---` followed by the AI's answer. If the Gemini Free Tier is overloaded, the script gracefully catches the error and prints `[Gemini Error] 503 UNAVAILABLE` instead of crashing.
 
-This reads HTML from `data/1_bronze/`, cleans and validates the records, and writes JSON files into `data/2_silver/`.
+### Phase 3: Test Data Tagging (Day 1-2)
+Run the batch-processing script to extract technical skills from the database's job descriptions. 
 
-### Load Gold Data
+    uv run tag_data.py
 
-```bash
-uv run python main.py load
-```
+*Expected Output:* A live log of updated jobs, followed by execution metrics.
 
-This loads the Silver JSON files into `data/3_gold/jobs.db` using SQLite and avoids duplicate inserts with `INSERT OR IGNORE`.
+    Analyzed Job 91397216: sql, python, java, react
+    ...
+    Total tokens used: 15420, took 45032.12ms
 
-### Run Profile Check
+### Phase 4: Test Skill Gap Analysis (Day 3-4)
+Run the analyzer to deterministically calculate what skills the candidate is missing based on `resume.txt`.
 
-```bash
-uv run python main.py profile
-```
+    uv run find_skill_gaps.py
 
-This runs the data profiler against the Gold database.
+*Expected Output:* A strictly lowercase, alphabetical list of missing skills (`gaps=...`), followed by time/token tracking, and a bonus statistical breakdown of the most in-demand missing skills.
 
-### Run All Steps
+---
 
-```bash
-uv run python main.py all
-```
+## 📖 API / Function Reference
 
-This runs the complete pipeline: ingest → process → load → profile.
+### `prompt_model.py`
+* **`prompt_model(model: str, prompt: str) -> str`**
+  * **Purpose:** Smart router directing prompts to local Ollama or cloud Gemini based on the model string. Implements `try-except` blocks to prevent crashes during API rate-limiting.
+  * **Inputs:** `model` (e.g., 'llama3.1', 'gemini-3.5-flash'), `prompt` (User query).
+  * **Outputs:** LLM text response or gracefully formatted error string.
 
-### Expected Outputs
+### `tag_data.py`
+* **`tag_data(db_url: str) -> Tuple[int, float]`**
+  * **Purpose:** Batch processes database rows (5 at a time) using Gemini with `response_mime_type="application/json"` to ensure strict JSON output. Truncates descriptions to 1000 characters to optimize tokens.
+  * **Inputs:** `db_url` (Path to SQLite database).
+  * **Outputs:** Tokens used (int) and execution time in ms (float).
 
-- Bronze: raw `.html` files in `week_1/data/1_bronze/`
-- Silver: cleaned `.json` files in `week_1/data/2_silver/`
-- Gold: SQLite database at `week_1/data/3_gold/jobs.db`
+### `find_skill_gaps.py`
+* **`find_skill_gaps(input_file_path: str, db_url: str) -> SkillGapResult`**
+  * **Purpose:** Extracts skills from a resume using a temperature=0.0 LLM call, sanitizes inputs for jailbreaks, and uses deterministic Python Set math to calculate the gap against the job database.
+  * **Inputs:** `input_file_path` (Path to resume text), `db_url` (Path to SQLite database).
+  * **Outputs:** Pydantic `SkillGapResult` containing sorted gaps, token/time metrics, and demand statistics.
 
-## Technical Reflections
+---
 
-### Day 1: The Extractor (Medallion & Lakehouses)
+## 📊 Data & Assumptions
 
-Why is it useful to keep the original raw HTML files instead of directly inserting processed data into the database? What problems become easier to debug or recover from?
+* **Database Schema:** Assumes the SQLite table is named `jobs` with a Primary Key `source_id` (TEXT) and columns `description` (TEXT) and `tech_stack` (TEXT).
+* **Data Flow:** Raw descriptions → Gemini JSON Extraction → SQL Update → Database → Python Set Math ← Gemini Resume Extraction.
+* **Token Optimization Assumption:** Assumes the core technical requirements of a job are listed within the first 1,000 characters of a description.
+* **Parsing Rules:** Assumes technical skills can be reliably delimited by commas (`,`) or slashes (`/`), with hardcoded exceptions preserving terms like `CI/CD` and `A/B testing`.
 
-- **Answer**: Keeping the raw HTML in the Bronze layer preserves the original source of truth. If the parser changes, a field is extracted incorrectly, or the business rules evolve later, the pipeline can be replayed from the same raw data without needing to re-download anything. It also makes debugging much easier because you can compare the transformed record against the exact source page that produced it.
+---
 
-### Day 2: Treatment Plant (ETL vs ELT & Scale)
+## 🧪 Testing
 
-Why do cloud systems prefer loading raw data first before cleaning it (ELT)? What problems happen when processing files sequentially, and how does distributed processing help?
+* **Rate Limit Resiliency:** Tested against Google's Free Tier 15 RPM limit. The scripts simulate server overload (HTTP 503) and successfully utilize an exponential backoff/retry loop without crashing.
+* **Determinism Verification:** The `find_skill_gaps.py` script was tested with multiple consecutive runs. Because the gap logic relies on pure mathematical Set Operations (`set(A) - set(B)`) rather than LLM reasoning, the output is guaranteed to be 100% deterministic.
+* **Jailbreak Safety:** The system was tested by injecting malicious prompts (e.g., "Ignore previous instructions") into `resume.txt`. The script successfully intercepts known attack vectors, strips conversational context, and forces a strict data-extraction schema.
 
-- **Answer**: Cloud systems often prefer ELT because raw data is cheap to store and flexible to reuse. Teams can load first, then apply different transformations later for analytics, machine learning, or reporting without repeatedly re-ingesting the source. Sequential processing is simple, but it becomes slow and fragile at scale because one bad file can block the entire run and one worker must do all the work. Distributed tools such as Spark split the workload across many workers so large datasets can be transformed faster and more reliably.
+---
 
-### Day 3: The Blueprint & The Vault (Storage & Contracts)
+## ⚠️ Limitations
 
-What should happen if an important field like `job_title` disappears? Why fail early instead of silently inserting `nulls` into DB? How does `INSERT OR IGNORE` help prevent duplicate records?
+* **API Bottlenecks:** Because the system relies heavily on free-tier cloud models, batch processing of large databases is bottlenecked by the 15 Requests Per Minute limit, artificially extending runtime.
+* **Semantic Matching Constraints:** The current skill gap logic relies on exact lowercase string matching. Therefore, "ReactJS", "React.js", and "React" are treated as distinct skills. Slight inaccuracies may occur due to missing semantic grouping.
+* **Loss of Deep Context:** To optimize token usage, heavily verbose job descriptions are truncated. If a recruiter placed mandatory technical requirements at the very bottom of a 5,000-character description, the system would miss them.
 
-- **Answer**: If a required field like `job_title` is missing, the record should fail validation instead of being inserted with a null or empty value. Failing early protects downstream dashboards and analytics from corrupted rows that are hard to detect later. The pipeline should stop at the contract boundary, report the issue, and keep the invalid record out of the warehouse. `INSERT OR IGNORE` makes the load idempotent by preventing duplicate rows when the same JSON file is loaded again.
+---
 
-### Day 4: The QA Inspector & Orchestrator (Orchestration & DAGs)
+## 🧠 Architecture Reflection
 
-What happens if `processor.py` crashes halfway? How are automated orchestration tools more reliable than manual retries with Python scripts?
+### Design Choices
+The system is built on **Separation of Concerns**. LLMs are utilized strictly as *Data Extractors* (pulling skills from text), while traditional programming (Python Sets and SQL) handles the *Logic* (calculating the gaps). This prevents LLM hallucinations and ensures mathematical determinism. Error handling was prioritized globally; the system fails gracefully with clean terminal outputs rather than dumping stack traces.
 
-- **Answer**: If `processor.py` crashes halfway through, the pipeline can be left in a partial state where some outputs exist and others do not. Manual retries require a person to notice the failure, rerun the correct step, and make sure the earlier outputs are still valid. Orchestration tools such as Airflow are more reliable because they model dependencies explicitly, retry failed steps automatically, keep run history, and make the pipeline observable and schedulable.
+### Trade-offs
+I prioritized **Reliability and Cost-Efficiency over Raw Speed**. In `tag_data.py`, deliberate 5-second delays (`time.sleep`) are injected between batch executions. While this extends the runtime, it guarantees adherence to Gemini's 15 RPM limits. Furthermore, I chose to truncate the job description inputs—trading a minor risk of losing deep-context data for a massive reduction in API token consumption.
 
-## Notes
-
-- The CLI currently supports `ingest`, `process`, `load`, `profile`, and `all`.
-- The Gold layer uses SQLite with `source_id` as the primary key.
-- The Silver layer is designed to be idempotent by skipping existing output files.
+### Improvements
+Given more time, I would implement **Vector Embeddings for Semantic Search**. Relying on strict lowercase string matching means "ReactJS" and "React.js" are treated as distinct skills. By embedding the extracted skills and using Cosine Similarity, the system could identify that a candidate with "NodeJS" automatically satisfies a requirement for "Node.js".
