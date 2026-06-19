@@ -13,17 +13,17 @@ This project is an AI-powered data processing pipeline designed to bridge the ga
 * **Ollama** (Desktop application running in the background)
 
 **1. Sync the Python Environment:**
-This project uses `uv` for lightning-fast dependency management. Inside the `week_2` directory, run this command to automatically create the virtual environment and install all required packages (`google-genai`, `ollama`, `pydantic`, `python-dotenv`):
+This project uses `uv sync` for lightning-fast dependency management. Inside the `week_2` directory, run this command to automatically create the virtual environment and install all required packages (`google-genai`, `ollama`, `pydantic`, `python-dotenv`):
 
     uv sync
 
 **2. Configure Environment Variables:**
-Create a `.env` file in the root of the `week_2` directory and add your Google AI Studio API key. *(Note: Do not commit this file to Git. Ensure it is in your `.gitignore`)*.
+Copy the `.env.example` file to create a new `.env` file in the root of the `week_2` directory, and change the `GOOGLE_API_KEY` to your own Google AI Studio API key. *(Note: Do not commit the `.env` file to Git. Ensure it is in your `.gitignore`)*.
 
     GOOGLE_API_KEY="your_actual_api_key_here"
 
 **3. Prepare Data Files:**
-Ensure `jobs_d1.db` (the SQLite database) and `resume.txt` (the candidate's resume) are present in the `week_2` directory.
+Ensure "resources\" folder with  `jobs_d1.db` (the SQLite database) and `resume.txt` (the candidate's resume) are present in the `week_2` directory.
 
 ---
 
@@ -77,19 +77,19 @@ Run the analyzer to deterministically calculate what skills the candidate is mis
 
 ## 📖 API / Function Reference
 
-### `prompt_model.py`
+### `uv run prompt_model.py`
 * **`prompt_model(model: str, prompt: str) -> str`**
   * **Purpose:** Smart router directing prompts to local Ollama or cloud Gemini based on the model string. Implements `try-except` blocks to prevent crashes during API rate-limiting.
   * **Inputs:** `model` (e.g., 'llama3.1', 'gemini-3.5-flash'), `prompt` (User query).
   * **Outputs:** LLM text response or gracefully formatted error string.
 
-### `tag_data.py`
+### `uv run tag_data.py`
 * **`tag_data(db_url: str) -> Tuple[int, float]`**
   * **Purpose:** Batch processes database rows (5 at a time) using Gemini with `response_mime_type="application/json"` to ensure strict JSON output. Truncates descriptions to 1000 characters to optimize tokens.
   * **Inputs:** `db_url` (Path to SQLite database).
   * **Outputs:** Tokens used (int) and execution time in ms (float).
 
-### `find_skill_gaps.py`
+### `uv run find_skill_gaps.py`
 * **`find_skill_gaps(input_file_path: str, db_url: str) -> SkillGapResult`**
   * **Purpose:** Extracts skills from a resume using a temperature=0.0 LLM call, sanitizes inputs for jailbreaks, and uses deterministic Python Set math to calculate the gap against the job database.
   * **Inputs:** `input_file_path` (Path to resume text), `db_url` (Path to SQLite database).
