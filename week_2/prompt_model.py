@@ -9,12 +9,10 @@ load_dotenv()
 
 def prompt_model(model: str, prompt: str) -> str:
     try:
-        # Route 1: Local Ollama Models
         if model in ["llama3.1", "phi3", "deepseek-r1:1.5b"]:
             response = ollama.generate(model=model, prompt=prompt)
             return response.get('response', '')
             
-        # Route 2: Cloud Gemini Models
         elif "gemini" in model:
             api_key = os.getenv("GOOGLE_API_KEY")
             if not api_key:
@@ -22,7 +20,6 @@ def prompt_model(model: str, prompt: str) -> str:
                 
             client = genai.Client(api_key=api_key)
             
-            # --- NEW: Retry loop for 503 Server Errors ---
             max_retries = 3
             for attempt in range(max_retries):
                 try:
@@ -32,10 +29,8 @@ def prompt_model(model: str, prompt: str) -> str:
                     )
                     return response.text
                 except Exception as e:
-                    # If it's the last attempt, raise the error to be caught by the main block
                     if attempt == max_retries - 1:
                         raise e
-                    # Otherwise, wait 2 seconds and try again
                     time.sleep(2)
             
         else:
