@@ -107,11 +107,28 @@
         .remove-file:hover {
             color: #a71d2a;
         }
+        .btn-outline-secondary {
+            border-color: #ddd;
+            color: #6c757d;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #5c54c4;
+            border-color: #5c54c4;
+            color: white;
+        }
     </style>
 </head>
 <body>
 
     <div class="main-container">
+        <div class="d-flex justify-content-end gap-2 mb-3">
+            <!-- <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-gauge"></i> Dashboard
+            </a> -->
+            <a href="/chart" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-chart-line"></i> Chart
+            </a>
+        </div>
         <h2 class="text-center mb-4" style="color: #333; font-weight: bold;">Resume Helper Chatbot</h2>
 
         <div class="chat-container">
