@@ -117,32 +117,70 @@
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
 
-        // Function to create a new user message and add it to the chat
-        function sendMessage() {
+        // Note the "async" keyword - we need this to wait for the AI to reply!
+        async function sendMessage() {
             const messageText = messageInput.value.trim();
-            
-            // Do nothing if the input is empty
             if (messageText === "") return;
 
-            // Build the HTML for the new user bubble
+            // 1. Show the user's message immediately
             const userMessageHtml = `
                 <div class="d-flex justify-content-end mb-3">
                     <div class="chat-bubble user-bubble">${messageText}</div>
                 </div>
             `;
-
-            // Insert it into the chat box
             chatBox.insertAdjacentHTML('beforeend', userMessageHtml);
-
-            // Clear the input field and scroll to the bottom of the chat
-            messageInput.value = '';
+            messageInput.value = ''; // Clear the input box
             chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 2. Show a temporary "AI is typing..." message
+            const typingId = "typing-" + Date.now();
+            const typingHtml = `
+                <div class="d-flex justify-content-start mb-3" id="${typingId}">
+                    <div class="chat-bubble bot-bubble text-muted"><em>AI is typing...</em></div>
+                </div>
+            `;
+            chatBox.insertAdjacentHTML('beforeend', typingHtml);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 3. Send the message to your FastAPI Backend!
+            try {
+                const response = await fetch('http://127.0.0.1:8080/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: messageText })
+                });
+
+                const data = await response.json();
+
+                // 4. Remove the "typing..." message
+                document.getElementById(typingId).remove();
+
+                // 5. Show the real AI response
+                // We use replace(/\n/g, '<br>') to make sure paragraph breaks look right in HTML
+                const formattedResponse = data.response.replace(/\n/g, '<br>');
+                const botMessageHtml = `
+                    <div class="d-flex justify-content-start mb-3">
+                        <div class="chat-bubble bot-bubble">${formattedResponse}</div>
+                    </div>
+                `;
+                chatBox.insertAdjacentHTML('beforeend', botMessageHtml);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+            } catch (error) {
+                // If the backend is off or crashes, show an error
+                document.getElementById(typingId).remove();
+                const errorHtml = `
+                    <div class="d-flex justify-content-start mb-3">
+                        <div class="chat-bubble bot-bubble text-danger">Error: Could not reach the AI backend.</div>
+                    </div>
+                `;
+                chatBox.insertAdjacentHTML('beforeend', errorHtml);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
         }
 
-        // Trigger send when the Send button is clicked
         sendBtn.addEventListener('click', sendMessage);
 
-        // Trigger send when the Enter key is pressed
         messageInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 sendMessage();
