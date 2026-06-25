@@ -1,0 +1,27 @@
+# Virtual Environments (CRITICAL)
+.venv/
+venv/
+env/
+
+# Secrets (CRITICAL)
+.env
+
+# Git History
+.git/
+.gitignore
+
+# Python Cache & Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Docker Files (The container doesn't need its own instructions)
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# OS & Editor Junk
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
