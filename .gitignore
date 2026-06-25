@@ -6,3 +6,14 @@ src/__pycache__/
 
 # week_2
 .env
+
+# week 3
+# Environments
+.venv/
+.env
+*.pem
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+Thumbs.db

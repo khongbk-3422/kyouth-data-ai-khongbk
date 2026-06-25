@@ -13,10 +13,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # GEMINI_MODEL = "gemini-2.5-flash-lite"
-GEMINI_MODEL = "gemini-3-flash"
+GEMINI_MODEL = "gemini-3-flash-preview"
 # eval
-DB_PATH = "resources_eval_test/jobs_d3_eval.db"
-RESUME_PATH = "resources_eval_test/resume_d3_eval.txt"
+DB_PATH = "resources_eval/jobs_d3_eval.db"
+RESUME_PATH = "resources_eval/resume_d3_eval.txt"
 
 # resources
 # DB_PATH = "resources/jobs_d1.db"
