@@ -109,8 +109,7 @@
             <button class="icon-btn"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
             
             <select id="modelSelector" class="form-select me-2" style="width: auto; border: none; font-weight: bold; color: #5c54c4;">
-                <option value="gemini">Gemini Cloud</option>
-                <option value="ollama">Ollama Local</option>
+                <option value="loading">Loading models...</option>
             </select>
 
             <input type="text" id="messageInput" placeholder="Type a message...">
@@ -122,16 +121,48 @@
         const chatBox = document.getElementById('chatBox');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
-        
-        // ❌ REMOVED selectedModel FROM HERE
+        const modelSelector = document.getElementById('modelSelector'); 
 
-        // Note the "async" keyword - we need this to wait for the AI to reply!
+        // --- Populates the dropdown menu dynamically from your backend ---
+        async function loadAvailableModels() {
+            try {
+                const response = await fetch('http://127.0.0.1:8080/models');
+                const data = await response.json();
+
+                // Clear the "Loading..." placeholder
+                modelSelector.innerHTML = '';
+
+                // 1. Loop through Gemini models parsed from .rate_limits.txt
+                if (data.gemini_models && data.gemini_models.length > 0) {
+                    data.gemini_models.forEach(modelName => {
+                        modelSelector.innerHTML += `<option value="${modelName}">${modelName} (Cloud)</option>`;
+                    });
+                }
+
+                // 2. Loop through Ollama models and append the prefix namespace
+                if (data.ollama_models && data.ollama_models.length > 0) {
+                    data.ollama_models.forEach(modelName => {
+                        modelSelector.innerHTML += `<option value="ollama-${modelName}">${modelName} (Local)</option>`;
+                    });
+                }
+
+            } catch (error) {
+                console.error("Failed to load models:", error);
+                modelSelector.innerHTML = `<option value="gemini-2.5-flash">Gemini Cloud Only (Local Error)</option>`;
+            }
+        }
+
+        // Fire the function to populate the list immediately on page mount
+        loadAvailableModels();
+
+
+        // Sends message along with dynamic model selection to backend
         async function sendMessage() {
             const messageText = messageInput.value.trim();
             if (messageText === "") return;
 
-            // ✅ MOVED IT HERE: Now it checks the dropdown exactly when you click Send!
-            const selectedModel = document.getElementById('modelSelector').value;
+            // Grabs the selected option value (e.g., 'gemini-2.5-flash' or 'ollama-phi3:latest')
+            const selectedModel = modelSelector.value;
 
             // 1. Show the user's message immediately
             const userMessageHtml = `
@@ -140,7 +171,7 @@
                 </div>
             `;
             chatBox.insertAdjacentHTML('beforeend', userMessageHtml);
-            messageInput.value = ''; // Clear the input box
+            messageInput.value = ''; 
             chatBox.scrollTop = chatBox.scrollHeight;
 
             // 2. Show a temporary "AI is typing..." message
@@ -160,7 +191,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         prompt: messageText,
-                        model_choice: selectedModel // This will now send "ollama" correctly!
+                        model_choice: selectedModel 
                     })
                 });
 
@@ -180,7 +211,6 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
 
             } catch (error) {
-                // If the backend is off or crashes, show an error
                 document.getElementById(typingId).remove();
                 const errorHtml = `
                     <div class="d-flex justify-content-start mb-3">

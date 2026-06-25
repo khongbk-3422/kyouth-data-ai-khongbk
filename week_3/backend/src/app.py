@@ -6,6 +6,9 @@ from pydantic import BaseModel
 from google import genai
 from dotenv import load_dotenv
 
+from .utils.ollama_utils import get_downloaded_models 
+from .utils.gemini_utils import get_gemini_models
+
 load_dotenv()
 
 app = FastAPI()
@@ -18,45 +21,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define our two models
-GEMINI_MODEL = "gemini-3-flash-preview"
-OLLAMA_MODEL = "llama3.1"
-OLLAMA_URL = "http://ollama:11434/api/generate"
+OLLAMA_URL = "http://host.docker.internal:11434/api/generate"
 
-# NEW: We now expect a 'model_choice' from the frontend!
 class ChatRequest(BaseModel):
     prompt: str
     model_choice: str 
 
+
+@app.get("/models")
+async def list_models():
+    local_models = get_downloaded_models()
+    gemini_models = get_gemini_models()
+    
+    return {
+        "gemini_models": gemini_models,
+        "ollama_models": local_models
+    }
+
 @app.post("/chat")
 async def chat(request: ChatRequest):
     user_message = request.prompt
-    choice = request.model_choice
+    choice = request.model_choice 
     
     try:
-        # --- PATH 1: User chose Gemini ---
-        if choice == "gemini":
+        if choice.startswith("gemini"):
             client = genai.Client()
             response = client.models.generate_content(
-                model=GEMINI_MODEL,
+                model=choice, 
                 contents=user_message,
             )
-            bot_reply = f"[Gemini] {response.text}"
+            bot_reply = f"[{choice}] {response.text}"
             
-        # --- PATH 2: User chose Ollama ---
-        elif choice == "ollama":
+        elif choice.startswith("ollama-"):
+            
+            actual_model = choice.replace("ollama-", "", 1)
+            
             payload = {
-                "model": OLLAMA_MODEL,
+                "model": actual_model, 
                 "prompt": user_message,
                 "stream": False
             }
             response = requests.post(OLLAMA_URL, json=payload)
             response.raise_for_status() 
             data = response.json()
-            bot_reply = f"[Ollama] {data.get('response', 'No response.')}"
-            
+            bot_reply = f"[{actual_model}] {data.get('response', 'No response.')}"
+
         else:
-            bot_reply = "Error: Unknown model selected."
+            bot_reply = "Error: Unknown model routing."
 
     except Exception as e:
         bot_reply = f"System Error: {str(e)}"
