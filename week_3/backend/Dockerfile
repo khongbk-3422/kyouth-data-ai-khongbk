@@ -11,7 +11,7 @@ WORKDIR /app
 COPY pyproject.toml .
 
 # Install dependencies using uv
-RUN uv pip install --system fastapi uvicorn pydantic requests google-genai python-dotenv
+RUN uv pip install --system fastapi uvicorn pydantic requests google-genai python-dotenv python-multipart PyPDF2
 
 # Copy the rest of your application code
 COPY . .

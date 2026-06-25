@@ -4,7 +4,7 @@ def get_gemini_models():
     models = []
     
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(current_dir, "utils/rate_limits.txt")
+    file_path = os.path.join(current_dir, "rate_limits.txt")
     
     try:
         with open(file_path, "r") as file:

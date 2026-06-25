@@ -1,13 +1,14 @@
 import os
-import requests
-from fastapi import FastAPI
+from typing import List, Optional
+from fastapi import FastAPI, Form, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from google import genai
 from dotenv import load_dotenv
 
+# Import your cleanly separated utility functions!
 from .utils.ollama_utils import get_downloaded_models 
 from .utils.gemini_utils import get_gemini_models
+from .utils.chat_utils import generate_chat_response
 
 load_dotenv()
 
@@ -39,37 +40,13 @@ async def list_models():
     }
 
 @app.post("/chat")
-async def chat(request: ChatRequest):
-    user_message = request.prompt
-    choice = request.model_choice 
+async def chat(
+    prompt: str = Form(...), 
+    model_choice: str = Form(...),
+    files: Optional[List[UploadFile]] = File(None) # Optional, because they might just type a message!
+):
     
-    try:
-        if choice.startswith("gemini"):
-            client = genai.Client()
-            response = client.models.generate_content(
-                model=choice, 
-                contents=user_message,
-            )
-            bot_reply = f"[{choice}] {response.text}"
-            
-        elif choice.startswith("ollama-"):
-            
-            actual_model = choice.replace("ollama-", "", 1)
-            
-            payload = {
-                "model": actual_model, 
-                "prompt": user_message,
-                "stream": False
-            }
-            response = requests.post(OLLAMA_URL, json=payload)
-            response.raise_for_status() 
-            data = response.json()
-            bot_reply = f"[{actual_model}] {data.get('response', 'No response.')}"
-
-        else:
-            bot_reply = "Error: Unknown model routing."
-
-    except Exception as e:
-        bot_reply = f"System Error: {str(e)}"
+    # Hand off all the heavy lifting to your new chat_utils file
+    bot_reply = await generate_chat_response(prompt, model_choice, files)
     
     return {"response": bot_reply}
