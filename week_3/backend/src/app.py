@@ -20,7 +20,7 @@ app.add_middleware(
 
 # Define our two models
 GEMINI_MODEL = "gemini-3-flash-preview"
-OLLAMA_MODEL = "llama3.2"
+OLLAMA_MODEL = "llama3.1"
 OLLAMA_URL = "http://ollama:11434/api/generate"
 
 # NEW: We now expect a 'model_choice' from the frontend!
