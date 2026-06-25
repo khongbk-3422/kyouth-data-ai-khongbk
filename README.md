@@ -1,134 +1,99 @@
-# AI Job Matching & Skill Gap Analyzer (Week 2)
+# Resume Helper Chatbot
 
 ## Project Overview
-This project is an AI-powered data processing pipeline designed to bridge the gap between job market demands and applicant skills. It leverages both local Large Language Models (Ollama) and cloud-based models (Google Gemini) to intelligently parse job descriptions, extract core technical stacks, and deterministically calculate the specific skill gaps of a candidate based on their resume. 
+This project is a full-stack AI-powered Resume Helper Chatbot. Its primary goal is to provide users with an intelligent tool to analyze their resumes against a technical database, identify skill gaps, and receive tailored advice. The system integrates a FastAPI backend, a responsive Bootstrap/HTML frontend, and supports both cloud-based (Gemini) and local (Ollama) AI models, all orchestrated via Docker Compose.
 
----
 
-## 🛠️ Setup Instructions
 
-**Prerequisites:** Ensure you have the following installed on your local machine:
-* **Python 3.10+**
-* **`uv`** (Python package manager)
-* **Ollama** (Desktop application running in the background)
+## Setup Instructions
 
-**1. Sync the Python Environment:**
-This project uses `uv sync` for lightning-fast dependency management. Inside the `week_2` directory, run this command to automatically create the virtual environment and install all required packages (`google-genai`, `ollama`, `pydantic`, `python-dotenv`):
+### Prerequisites
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
+* Git
 
-    uv sync
+### Local Setup
+1. Clone the repository: 
+   `git clone [YOUR_REPO_URL]`
+2. Create a `.env` file in the root directory by copying the example:
+   `cp .env.example .env`
+3. Configure your environment variables in the `.env` file (e.g., `GEMINI_API_KEY`).
 
-**2. Configure Environment Variables:**
-Copy the `.env.example` file to create a new `.env` file in the root of the `week_2` directory, and change the `GOOGLE_API_KEY` to your own Google AI Studio API key. *(Note: Do not commit the `.env` file to Git. Ensure it is in your `.gitignore`)*.
+## Usage
+1. **Run the application:** `docker compose up --build`
+2. **Access the interface:** Open `http://localhost:8000` in your web browser.
+3. **Expected Workflow:**
+   * Upload `.pdf` or `.txt` files using the attach icon.
+   * Type a request such as "find skill gap" in the message box.
+   * View the AI-generated analysis in the chat history.
 
-    GOOGLE_API_KEY="your_actual_api_key_here"
+## API / Function Reference
+* **POST `/chat`**: 
+    * **Endpoint**: `http://127.0.0.1:8080/chat`
+    * **Payload**: `FormData` containing `prompt` (string), `model_choice` (string), and `files` (binary).
+    * **Response**: `{ "response": "string" }`
+* **Frontend Logic**: The `sendMessage()` JS function in `app.html` handles `FormData` construction, performs the `fetch` request, and dynamically updates the DOM to display chat bubbles.
+* **Find Skill Gap**: By adding 1 to 5 resumes and upload into the chat, then type 'find skill gap' it will check the skill gap among your resumes and tech stack in db
 
-**3. Prepare Data Files:**
-Ensure "resources\" folder with  `jobs_d1.db` (the SQLite database) and `resume.txt` (the candidate's resume) are present in the `week_2` directory.
+graph LR
+    User[User/Browser] -->|POST /chat| FE[Frontend UI]
+    FE -->|FormData| BE[FastAPI Backend]
+    BE -->|SQL Query| DB[(SQLite Database)]
+    BE -->|API Request| AI{AI Provider}
+    AI -.->|JSON Response| BE
+    BE -.->|Rendered HTML| FE
 
----
+## API / Function Reference
 
-## 🚀 Execution Guide (Step-by-Step Usage)
+### Backend API
+* **`POST /chat`**: 
+    * **Endpoint**: `http://127.0.0.1:8080/chat`
+    * **Payload**: `multipart/form-data` containing:
+        * `prompt` (string): The user query.
+        * `model_choice` (string): The selected AI model (e.g., `gemini-3.5-flash`).
+        * `files` (binary): The uploaded `.pdf` or `.txt` resume files.
+    * **Response**: `{ "response": "string" }` (containing formatted gap analysis).
 
-All Python scripts must be executed using `uv run` to ensure they use the correct virtual environment.
+### Frontend Logic
+* **`sendMessage()`**: Constructs a `FormData` object, appends the user's message, selected model, and file binary data, then performs a `fetch` POST request. It handles DOM updates to show "typing" indicators and render the final chat bubbles.
+* **`renderFiles()`**: Manages the UI state for attached files, allowing users to verify and remove files before submission.
 
-### Phase 1: Verify Local Models (Part 1)
-First, download the required local models into Ollama. Run these commands one by one:
+### Service Interaction (Docker Network)
+The frontend and backend services interact through the Docker virtual network.
+1. **Request Flow**: The browser sends a request to the backend service via the mapped port (e.g., `8080`). 
+2. **Container Routing**: The Docker host intercepts this request and routes it to the FastAPI backend container.
+3. **Internal Discovery**: Inside the Docker network, containers communicate directly using service names, ensuring that the backend can process uploaded files efficiently before returning the JSON analysis to the frontend.
 
-    ollama pull llama3.1
-    ollama pull phi3
-    ollama pull deepseek-r1:1.5b
+## Data / Assumptions
+* **Input Expectations**: PDF files must be text-based (no image-only scans).
+* **Data Flow**: User Input -> Frontend -> FastAPI Middleware -> `find_skill_gaps` Engine -> AI Provider -> JSON Response -> Frontend UI Rendering.
+* **Simplifications**: The system uses a local SQLite database (`jobs_d3_eval.db`) to provide the technical skill pool for gap analysis.
 
-Verify they are correctly installed:
+## Testing
+* **Frontend**: Manual testing performed via browser UI to verify file upload and chat rendering.
+* **Backend**: Endpoints validated using standard HTTP POST requests via Postman/cURL.
+To verify your backend API independently of the frontend UI, you can use the following `curl` command. Ensure you have a test file (e.g., `test.pdf`) in your current directory:
 
-    ollama ls
+```bash
+curl -X POST [http://127.0.0.1:8080/chat](http://127.0.0.1:8080/chat) \
+  -F "prompt=find skill gap" \
+  -F "model_choice=gemini-3.5-flash" \
+  -F "files=@test.pdf"
+* **Integration**: Ensured services communicate via the Docker virtual network.
 
-### Phase 2: Test Model Routing (Part 3)
-Test the `prompt_model.py` script to ensure it correctly routes prompts to both your local machine and the cloud.
+## Limitations
+* **Authentication**: Currently lacks user login/authentication features.
+* **History**: Chat sessions are not persisted in a database; data resets on browser refresh.
+* **Accuracy**: Skill extraction relies on the underlying LLM's capability and document parsing fidelity.
 
-**Test Local Model (Ollama):**
-
-    uv run prompt_model.py llama3.1 "Tell me a short coding joke."
-
-**Test Cloud Model (Gemini):**
-
-    uv run prompt_model.py gemini-3.5-flash "What is the capital of Malaysia?"
-
-*Expected Output:* The terminal will print `--- RESPONSE ---` followed by the AI's answer. If the Gemini Free Tier is overloaded, the script gracefully catches the error and prints `[Gemini Error] 503 UNAVAILABLE` instead of crashing.
-
-### Phase 3: Test Data Tagging (Day 1-2)
-Run the batch-processing script to extract technical skills from the database's job descriptions. 
-
-    uv run tag_data.py
-
-*Expected Output:* A live log of updated jobs, followed by execution metrics.
-
-    Analyzed Job 91397216: sql, python, java, react
-    ...
-    Total tokens used: 15420, took 45032.12ms
-
-### Phase 4: Test Skill Gap Analysis (Day 3-4)
-Run the analyzer to deterministically calculate what skills the candidate is missing based on `resume.txt`.
-
-    uv run find_skill_gaps.py
-
-*Expected Output:* A strictly lowercase, alphabetical list of missing skills (`gaps=...`), followed by time/token tracking, and a bonus statistical breakdown of the most in-demand missing skills.
-
----
-
-## 📖 API / Function Reference
-
-### `uv run prompt_model.py`
-* **`prompt_model(model: str, prompt: str) -> str`**
-  * **Purpose:** Smart router directing prompts to local Ollama or cloud Gemini based on the model string. Implements `try-except` blocks to prevent crashes during API rate-limiting.
-  * **Inputs:** `model` (e.g., 'llama3.1', 'gemini-3.5-flash'), `prompt` (User query).
-  * **Outputs:** LLM text response or gracefully formatted error string.
-
-### `uv run tag_data.py`
-* **`tag_data(db_url: str) -> Tuple[int, float]`**
-  * **Purpose:** Batch processes database rows (5 at a time) using Gemini with `response_mime_type="application/json"` to ensure strict JSON output. Truncates descriptions to 1000 characters to optimize tokens.
-  * **Inputs:** `db_url` (Path to SQLite database).
-  * **Outputs:** Tokens used (int) and execution time in ms (float).
-
-### `uv run find_skill_gaps.py`
-* **`find_skill_gaps(input_file_path: str, db_url: str) -> SkillGapResult`**
-  * **Purpose:** Extracts skills from a resume using a temperature=0.0 LLM call, sanitizes inputs for jailbreaks, and uses deterministic Python Set math to calculate the gap against the job database.
-  * **Inputs:** `input_file_path` (Path to resume text), `db_url` (Path to SQLite database).
-  * **Outputs:** Pydantic `SkillGapResult` containing sorted gaps, token/time metrics, and demand statistics.
-
----
-
-## 📊 Data & Assumptions
-
-* **Database Schema:** Assumes the SQLite table is named `jobs` with a Primary Key `source_id` (TEXT) and columns `description` (TEXT) and `tech_stack` (TEXT).
-* **Data Flow:** Raw descriptions → Gemini JSON Extraction → SQL Update → Database → Python Set Math ← Gemini Resume Extraction.
-* **Token Optimization Assumption:** Assumes the core technical requirements of a job are listed within the first 1,000 characters of a description.
-* **Parsing Rules:** Assumes technical skills can be reliably delimited by commas (`,`) or slashes (`/`), with hardcoded exceptions preserving terms like `CI/CD` and `A/B testing`.
-
----
-
-## 🧪 Testing
-
-* **Rate Limit Resiliency:** Tested against Google's Free Tier 15 RPM limit. The scripts simulate server overload (HTTP 503) and successfully utilize an exponential backoff/retry loop without crashing.
-* **Determinism Verification:** The `find_skill_gaps.py` script was tested with multiple consecutive runs. Because the gap logic relies on pure mathematical Set Operations (`set(A) - set(B)`) rather than LLM reasoning, the output is guaranteed to be 100% deterministic.
-* **Jailbreak Safety:** The system was tested by injecting malicious prompts (e.g., "Ignore previous instructions") into `resume.txt`. The script successfully intercepts known attack vectors, strips conversational context, and forces a strict data-extraction schema.
-
----
-
-## ⚠️ Limitations
-
-* **API Bottlenecks:** Because the system relies heavily on free-tier cloud models, batch processing of large databases is bottlenecked by the 15 Requests Per Minute limit, artificially extending runtime.
-* **Semantic Matching Constraints:** The current skill gap logic relies on exact lowercase string matching. Therefore, "ReactJS", "React.js", and "React" are treated as distinct skills. Slight inaccuracies may occur due to missing semantic grouping.
-* **Loss of Deep Context:** To optimize token usage, heavily verbose job descriptions are truncated. If a recruiter placed mandatory technical requirements at the very bottom of a 5,000-character description, the system would miss them.
-
----
-
-## 🧠 Architecture Reflection
-
+## Architecture Reflection
 ### Design Choices
-The system is built on **Separation of Concerns**. LLMs are utilized strictly as *Data Extractors* (pulling skills from text), while traditional programming (Python Sets and SQL) handles the *Logic* (calculating the gaps). This prevents LLM hallucinations and ensures mathematical determinism. Error handling was prioritized globally; the system fails gracefully with clean terminal outputs rather than dumping stack traces.
+I chose a decoupled microservices architecture to separate the frontend interface from the backend processing logic. By containerizing each service with Docker, I ensure that the application runs identically on any machine, eliminating "it works on my machine" issues. The backend leverages FastAPI for its asynchronous capabilities, which are essential when waiting for high-latency AI model responses.
 
 ### Trade-offs
-I prioritized **Reliability and Cost-Efficiency over Raw Speed**. In `tag_data.py`, deliberate 5-second delays (`time.sleep`) are injected between batch executions. While this extends the runtime, it guarantees adherence to Gemini's 15 RPM limits. Furthermore, I chose to truncate the job description inputs—trading a minor risk of losing deep-context data for a massive reduction in API token consumption.
+While a monolithic architecture would have been simpler to build and deploy for a single developer, it would have tightly coupled the UI to the business logic. I prioritized **modular maintainability** over initial simplicity; while the setup overhead with Docker Compose was higher, it allows me to independently swap the frontend framework (e.g., to React) or upgrade the AI engine without modifying the core ingestion pipeline.
 
 ### Improvements
-Given more time, I would implement **Vector Embeddings for Semantic Search**. Relying on strict lowercase string matching means "ReactJS" and "React.js" are treated as distinct skills. By embedding the extracted skills and using Cosine Similarity, the system could identify that a candidate with "NodeJS" automatically satisfies a requirement for "Node.js".
+Given more time, I would:
+1. Implement a persistent database (PostgreSQL) to store chat history, moving beyond the current in-memory stateless design.
+2. Integrate a robust frontend framework (React/Vite) to manage component state more effectively than vanilla JavaScript.
+3. Add a CI/CD pipeline for automated testing and cloud deployment.
