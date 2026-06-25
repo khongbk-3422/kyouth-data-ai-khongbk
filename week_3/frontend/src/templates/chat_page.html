@@ -107,6 +107,12 @@
 
         <div class="input-container d-flex align-items-center">
             <button class="icon-btn"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+            
+            <select id="modelSelector" class="form-select me-2" style="width: auto; border: none; font-weight: bold; color: #5c54c4;">
+                <option value="gemini">Gemini Cloud</option>
+                <option value="ollama">Ollama Local</option>
+            </select>
+
             <input type="text" id="messageInput" placeholder="Type a message...">
             <button class="btn send-btn px-4" id="sendBtn">Send</button>
         </div>
@@ -116,11 +122,16 @@
         const chatBox = document.getElementById('chatBox');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
+        
+        // ❌ REMOVED selectedModel FROM HERE
 
         // Note the "async" keyword - we need this to wait for the AI to reply!
         async function sendMessage() {
             const messageText = messageInput.value.trim();
             if (messageText === "") return;
+
+            // ✅ MOVED IT HERE: Now it checks the dropdown exactly when you click Send!
+            const selectedModel = document.getElementById('modelSelector').value;
 
             // 1. Show the user's message immediately
             const userMessageHtml = `
@@ -147,7 +158,10 @@
                 const response = await fetch('http://127.0.0.1:8080/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: messageText })
+                    body: JSON.stringify({ 
+                        prompt: messageText,
+                        model_choice: selectedModel // This will now send "ollama" correctly!
+                    })
                 });
 
                 const data = await response.json();
@@ -156,7 +170,6 @@
                 document.getElementById(typingId).remove();
 
                 // 5. Show the real AI response
-                // We use replace(/\n/g, '<br>') to make sure paragraph breaks look right in HTML
                 const formattedResponse = data.response.replace(/\n/g, '<br>');
                 const botMessageHtml = `
                     <div class="d-flex justify-content-start mb-3">
