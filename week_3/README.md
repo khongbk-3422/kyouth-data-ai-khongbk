@@ -34,6 +34,7 @@ This project is a full-stack AI-powered Resume Helper Chatbot. Its primary goal 
 * **Frontend Logic**: The `sendMessage()` JS function in `app.html` handles `FormData` construction, performs the `fetch` request, and dynamically updates the DOM to display chat bubbles.
 * **Find Skill Gap**: By adding 1 to 5 resumes and upload into the chat, then type 'find skill gap' it will check the skill gap among your resumes and tech stack in db
 
+```mermaid
 graph LR
     User[User/Browser] -->|POST /chat| FE[Frontend UI]
     FE -->|FormData| BE[FastAPI Backend]
@@ -41,6 +42,7 @@ graph LR
     BE -->|API Request| AI{AI Provider}
     AI -.->|JSON Response| BE
     BE -.->|Rendered HTML| FE
+```
 
 ## API / Function Reference
 
@@ -78,6 +80,9 @@ curl -X POST [http://127.0.0.1:8080/chat](http://127.0.0.1:8080/chat) \
   -F "prompt=find skill gap" \
   -F "model_choice=gemini-3.5-flash" \
   -F "files=@test.pdf"
+
+```
+
 * **Integration**: Ensured services communicate via the Docker virtual network.
 
 ## Limitations
