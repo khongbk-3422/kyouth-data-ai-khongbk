@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Interface</title>
+    <title>Resume Helper Chatbot</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
-        /* Custom Styles to match the screenshot */
         body {
-            background-color: #2b2b2b; /* Dark background behind the white page */
+            background-color: #2b2b2b; 
             height: 100vh;
             display: flex;
             align-items: center;
@@ -51,7 +50,7 @@
             color: #333;
         }
         .user-bubble {
-            background-color: #5c54c4; /* Purple to match image */
+            background-color: #5c54c4; 
             color: white;
         }
         .input-container {
@@ -61,12 +60,12 @@
             padding: 5px 10px;
             margin-top: 15px;
         }
-        .input-container input {
+        .input-container input[type="text"] {
             border: none;
             box-shadow: none;
             flex-grow: 1;
         }
-        .input-container input:focus {
+        .input-container input[type="text"]:focus {
             outline: none;
         }
         .send-btn {
@@ -85,65 +84,176 @@
             color: #6c757d;
             font-size: 1.2rem;
             margin-right: 10px;
+            cursor: pointer;
+        }
+        
+        /* NEW: Styles for the attached file badges */
+        .file-badge {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #495057;
+        }
+        .remove-file {
+            cursor: pointer;
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .remove-file:hover {
+            color: #a71d2a;
+        }
+        .btn-outline-secondary {
+            border-color: #ddd;
+            color: #6c757d;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #5c54c4;
+            border-color: #5c54c4;
+            color: white;
         }
     </style>
 </head>
 <body>
 
     <div class="main-container">
+        <div class="d-flex justify-content-end gap-2 mb-3">
+            <!-- <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-gauge"></i> Dashboard
+            </a> -->
+            <a href="/chart" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-chart-line"></i> Chart
+            </a>
+        </div>
+        <h2 class="text-center mb-4" style="color: #333; font-weight: bold;">Resume Helper Chatbot</h2>
+
         <div class="chat-container">
             <div class="chat-box" id="chatBox">
                 <div class="d-flex justify-content-start mb-3">
-                    <div class="chat-bubble bot-bubble">Hi! How can I help you today?</div>
-                </div>
-                <div class="d-flex justify-content-end mb-3">
-                    <div class="chat-bubble user-bubble">Hi</div>
-                </div>
-                <div class="d-flex justify-content-start mb-3">
-                    <div class="chat-bubble bot-bubble">Hello!</div>
+                    <div class="chat-bubble bot-bubble">Hi! Upload a resume and let me know how I can help you tailor it today!</div>
                 </div>
             </div>
         </div>
 
         <div class="input-container d-flex align-items-center">
-            <button class="icon-btn"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+            <input type="file" id="fileInput" accept=".pdf,.txt" multiple style="display: none;">
+            <button class="icon-btn" onclick="document.getElementById('fileInput').click()" title="Attach Resume (PDF or TXT)">
+                <i class="fa-solid fa-arrow-up-from-bracket"></i>
+            </button>
             
             <select id="modelSelector" class="form-select me-2" style="width: auto; border: none; font-weight: bold; color: #5c54c4;">
-                <option value="gemini">Gemini Cloud</option>
-                <option value="ollama">Ollama Local</option>
+                <option value="loading">Loading models...</option>
             </select>
 
             <input type="text" id="messageInput" placeholder="Type a message...">
             <button class="btn send-btn px-4" id="sendBtn">Send</button>
         </div>
+
+        <div id="fileDisplayArea" class="mt-2 d-flex flex-wrap gap-2"></div>
     </div>
 
     <script>
         const chatBox = document.getElementById('chatBox');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
+        const modelSelector = document.getElementById('modelSelector'); 
         
-        // ❌ REMOVED selectedModel FROM HERE
+        // --- NEW: File Handling Logic ---
+        const fileInput = document.getElementById('fileInput');
+        const fileDisplayArea = document.getElementById('fileDisplayArea');
+        let selectedFiles = []; // Array to permanently store files until user removes them
 
-        // Note the "async" keyword - we need this to wait for the AI to reply!
+        fileInput.addEventListener('change', (e) => {
+            const incomingFiles = Array.from(e.target.files);
+            
+            if (selectedFiles.length + incomingFiles.length > 5) {
+                alert("You can only attach a maximum of 5 files at a time.");
+                fileInput.value = ''; // Reset
+                return;
+            }
+
+            incomingFiles.forEach(file => {
+                if (file.type === "application/pdf" || file.type === "text/plain") {
+                    // Check if file is already attached
+                    if(!selectedFiles.some(f => f.name === file.name)) {
+                        selectedFiles.push(file);
+                    }
+                } else {
+                    alert(`"${file.name}" is not supported. Please upload only PDF or TXT files.`);
+                }
+            });
+            
+            renderFiles();
+            fileInput.value = ''; // Reset the input so you can select the same file again if removed
+        });
+
+        // Draws the file badges below the input
+        function renderFiles() {
+            fileDisplayArea.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const badge = document.createElement('div');
+                badge.className = 'file-badge';
+                badge.innerHTML = `
+                    <i class="fa-solid fa-file-lines text-secondary"></i>
+                    <span class="text-truncate" style="max-width: 150px;" title="${file.name}">${file.name}</span>
+                    <i class="fa-solid fa-xmark remove-file" onclick="removeFile(${index})"></i>
+                `;
+                fileDisplayArea.appendChild(badge);
+            });
+        }
+
+        // Global function to remove a file when clicking the "X"
+        window.removeFile = function(index) {
+            selectedFiles.splice(index, 1);
+            renderFiles();
+        }
+        // --------------------------------
+
+
+        async function loadAvailableModels() {
+            try {
+                const response = await fetch('http://127.0.0.1:8080/models');
+                const data = await response.json();
+                modelSelector.innerHTML = '';
+
+                if (data.gemini_models && data.gemini_models.length > 0) {
+                    data.gemini_models.forEach(modelName => {
+                        modelSelector.innerHTML += `<option value="${modelName}">${modelName} (Cloud)</option>`;
+                    });
+                }
+                if (data.ollama_models && data.ollama_models.length > 0) {
+                    data.ollama_models.forEach(modelName => {
+                        modelSelector.innerHTML += `<option value="ollama-${modelName}">${modelName} (Local)</option>`;
+                    });
+                }
+            } catch (error) {
+                modelSelector.innerHTML = `<option value="gemini-2.5-flash">Gemini Cloud Only (Local Error)</option>`;
+            }
+        }
+        loadAvailableModels();
+
+
         async function sendMessage() {
             const messageText = messageInput.value.trim();
             if (messageText === "") return;
 
-            // ✅ MOVED IT HERE: Now it checks the dropdown exactly when you click Send!
-            const selectedModel = document.getElementById('modelSelector').value;
+            const selectedModel = modelSelector.value;
 
-            // 1. Show the user's message immediately
+            // Show user message
             const userMessageHtml = `
                 <div class="d-flex justify-content-end mb-3">
                     <div class="chat-bubble user-bubble">${messageText}</div>
                 </div>
             `;
             chatBox.insertAdjacentHTML('beforeend', userMessageHtml);
-            messageInput.value = ''; // Clear the input box
+            messageInput.value = ''; 
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            // 2. Show a temporary "AI is typing..." message
+            // Show typing...
             const typingId = "typing-" + Date.now();
             const typingHtml = `
                 <div class="d-flex justify-content-start mb-3" id="${typingId}">
@@ -153,23 +263,28 @@
             chatBox.insertAdjacentHTML('beforeend', typingHtml);
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            // 3. Send the message to your FastAPI Backend!
             try {
+                // --- MAJOR CHANGE: Build FormData instead of JSON ---
+                const formData = new FormData();
+                formData.append('prompt', messageText);
+                formData.append('model_choice', selectedModel);
+                
+                // Append all stored files to the form data
+                selectedFiles.forEach(file => {
+                    formData.append('files', file); 
+                });
+
+                // Notice we REMOVED the 'Content-Type' header. 
+                // The browser automatically sets it correctly for FormData.
                 const response = await fetch('http://127.0.0.1:8080/chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        prompt: messageText,
-                        model_choice: selectedModel // This will now send "ollama" correctly!
-                    })
+                    body: formData
                 });
 
                 const data = await response.json();
 
-                // 4. Remove the "typing..." message
                 document.getElementById(typingId).remove();
 
-                // 5. Show the real AI response
                 const formattedResponse = data.response.replace(/\n/g, '<br>');
                 const botMessageHtml = `
                     <div class="d-flex justify-content-start mb-3">
@@ -180,7 +295,6 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
 
             } catch (error) {
-                // If the backend is off or crashes, show an error
                 document.getElementById(typingId).remove();
                 const errorHtml = `
                     <div class="d-flex justify-content-start mb-3">
@@ -193,11 +307,8 @@
         }
 
         sendBtn.addEventListener('click', sendMessage);
-
         messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
+            if (e.key === 'Enter') sendMessage();
         });
     </script>
 </body>

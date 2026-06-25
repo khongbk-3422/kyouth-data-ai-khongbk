@@ -9,10 +9,27 @@
     <style>
         body { background-color: #f8f9fa; padding: 30px; }
         .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn-outline-secondary {
+            border-color: #ddd;
+            color: #6c757d;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #5c54c4;
+            border-color: #5c54c4;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="d-flex justify-content-end gap-2 mb-3">
+            <!-- <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-gauge"></i> Dashboard
+            </a> -->
+            <a href="/chat" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-chart-line"></i> Chat
+            </a>
+        </div>
         <h2 class="mb-4 text-center">📊 Job Database Dashboard</h2>
 
         <div class="card p-4">

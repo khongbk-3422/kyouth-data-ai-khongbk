@@ -19,7 +19,7 @@ Sep 2013 - Jan 2049
 Bachelor of Computer Science (Data Science)
 Kuala Lumpur, Malaysia
 SKILLS
-Technical Skills: Python, SQL, Java, R, Pandas, NumPy, Scikit-learn, TensorFlow, PyTorch, Docker, Kubernetes, Git, CI/CD,
+Technical Skills: Python, SQL, Java, R, Pandas, NumPy, Scikit-learn, TensorFlow, PyTorch, Docker
 A/B Testing, Tableau
 Languages: English
 Additional Skills: Cooking, Flying, Babysitting
