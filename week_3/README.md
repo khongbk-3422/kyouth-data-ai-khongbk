@@ -17,6 +17,7 @@ This project is a full-stack AI-powered Resume Helper Chatbot. Its primary goal 
 2. Create a `.env` file in the root directory by copying the example:
    `cp .env.example .env`
 3. Configure your environment variables in the `.env` file (e.g., `GEMINI_API_KEY`).
+4. Change the ollama path at "docker-compose.yml" to your ollama path: "C:/Users/[computer-name]/.ollama:/root/.ollama"
 
 ## Usage
 1. **Run the application:** `docker compose up --build`
