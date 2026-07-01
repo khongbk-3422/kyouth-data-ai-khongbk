@@ -25,7 +25,7 @@ def get_model_limits(model_name: str):
                         tpm = int(parts[2].replace("K", "000"))
                         break
     except Exception as e:
-        print(f"Rate Limiter Warning: Could not read file: {e}")
+        print(f"Rate Limiter Warning: Could not read file: {e}") #test
 
     # 4. Perform the Math
     # BATCH_SIZE = (tpm / rpm) * 0.8 / 1000
